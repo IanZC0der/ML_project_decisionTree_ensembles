@@ -1,0 +1,9 @@
+*.zip
+.pytest_cache/
+.DS_Store
+__MACOSX
+*/
+*.png
+*.txt
+*html
+*pdf
