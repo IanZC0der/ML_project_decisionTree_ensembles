@@ -41,8 +41,8 @@ class dataExtractor:
 class decisionTreeExperiment(dataExtractor):
     def __init__(self, zipPath):
         super().__init__(zipPath)
-        self.bestParams = self._initializeAllData()
-        self._initializeBestParams()
+        self.bestParams = self._initialization()
+        self.testResults = self._initialization()
         self.scoring = {
             'f1_score': make_scorer(f1_score, zero_division=0.0, average="binary"),
             'accuracy': make_scorer(accuracy_score),
@@ -57,10 +57,14 @@ class decisionTreeExperiment(dataExtractor):
             "min_samples_split": list(range(2, 101, 2))
         }
     
-    def _initializeBestParams(self):
-        for key1, val1 in self.bestParams.items():
-            for key2, val2 in val1.items():
-                val2 = {"bestParams": None, "accuracy": None, "F1Score": None}
+    def _initialization(self):
+        result = {}
+        for clause in [300, 500, 1000, 1500, 1800]:
+            clauseDict = {}
+            for example in [100, 1000, 5000]:
+                clauseDict[example] = clauseDict.get(example, {"bestParams": None, "accuracy": None, "F1Score": None})
+            result[clause] = result.get(clause, clauseDict)
+        return result
     
     def _randomizedGridSearch(self, X, Y):
         model = DecisionTreeClassifier()
@@ -72,7 +76,17 @@ class decisionTreeExperiment(dataExtractor):
             for exampleNumber, val2 in val1.items():
                 X, Y = val2["valid"][:, :-1], val2["valid"][:, -1]
                 self.bestParams[clauseNumber][exampleNumber]["bestParams"], model = self._randomizedGridSearch(X, Y)
+                self.testResults[clauseNumber][exampleNumber]["bestParams"] = self.bestParams[clauseNumber][exampleNumber]["bestParams"]
                 [self.bestParams[clauseNumber][exampleNumber]["accuracy"], self.bestParams[clauseNumber][exampleNumber]["F1Score"]] = self._calc(Y, model.predict(X))
+    
+    def test(self):
+        for clauseNumber, val1 in self.allData.items():
+            for exampleNumber, val2 in val1.items():
+                X, Y = np.vstack((self.allData["train"][:,:-1], self.allData["valid"][:,:-1])), np.concatenate((self.allData["train"][:,-1], self.allData["valid"][:,-1]))
+                tree = DecisionTreeClassifier(**(self.testResults[clauseNumber][exampleNumber]["bestParams"]))
+                tree.fit(X, Y)
+                YPred = tree.predict(self.allData["test"][:, :-1])
+                [self.testResults[clauseNumber][exampleNumber]["accuracy"], self.testResults[clauseNumber][exampleNumber]["F1Score"]] = self._calc(self.allData["test"][:, -1], YPred)
     
     def _calc(self, Y, YPred):
         accuracy = accuracy_score(Y, YPred)
@@ -81,7 +95,7 @@ class decisionTreeExperiment(dataExtractor):
         return [round(_, 3) for _ in temp]
     
     def outputToTextFile(self):
-        filePath = "./results.txt"
+        filePath = "./results_decisionTree.txt"
         with open(filePath, "w") as file:
             sys.stdout = file
             for clauseNumber, val1 in self.allData.items():
@@ -93,11 +107,24 @@ class decisionTreeExperiment(dataExtractor):
                     print(self.bestParams[clauseNumber][exampleNumber]["accuracy"])
                     print("\nf1_score:\n")
                     print(self.bestParams[clauseNumber][exampleNumber]["F1Score"])
+                    print("\n--------test accuracy and f1score\n")
+                    print("\nAccuracy\n")
+                    print(self.testResults[clauseNumber][exampleNumber]["accuracy"])
+                    print("\nf1_score:\n")
+                    print(self.testResults[clauseNumber][exampleNumber]["F1Score"])
+                    print("\n--------test accuracy and f1score\n")
+
             sys.stdout = sys.__stdout__
 
-experiment = decisionTreeExperiment("project2_data.zip")
-experiment.searchForEachDataSet()
-experiment.outputToTextFile()
+
+def main():
+    experiment = decisionTreeExperiment("project2_data.zip")
+    experiment.searchForEachDataSet()
+    experiment.test()
+    experiment.outputToTextFile()
+
+if __name__ == "__main__":
+    main()
 
 
 # ext = dataExtractor("project2_data.zip")
