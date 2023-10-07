@@ -40,7 +40,7 @@ class dataExtractor:
 
 class decisionTreeExperiment(dataExtractor):
     def __init__(self, zipPath):
-        super.__init__(self, zipPath)
+        super().__init__(zipPath)
         self.bestParams = self._initializeAllData()
         self._initializeBestParams()
         self.scoring = {
@@ -95,6 +95,9 @@ class decisionTreeExperiment(dataExtractor):
                     print(self.bestParams[clauseNumber][exampleNumber]["F1Score"])
             sys.stdout = sys.__stdout__
 
+experiment = decisionTreeExperiment("project2_data.zip")
+experiment.searchForEachDataSet()
+experiment.outputToTextFile()
 
 
 # ext = dataExtractor("project2_data.zip")
