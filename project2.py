@@ -5,6 +5,8 @@ import io
 import glob
 import numpy as np
 import pandas as pd
+from openpyxl import Workbook, load_workbook
+from openpyxl.comments import Comment
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble import RandomForestClassifier
@@ -137,8 +139,15 @@ class dataExtractor:
                 }
                 table.append(row)
         
-        df = pd.DataFrame(rows)
-        df.to_excel(f"results_{identifier}.xlsx", index=False)
+        df = pd.DataFrame(table)
+        xlsxFile = f"results_{identifier}.xlsx"
+        df.to_excel(xlsxFile, index=False)
+        file = load_workbook(filename)
+        sheet = book.active
+        comment = Comment(text="D: decision tree classifier\nBG: bagging classifier\nRF: random forest classifier\nGB: gradient boosting classifier", author="Ian Zhang")
+        sheet["A1"].comment = comment
+        file.save(filename)
+
 
 
 class decisionTreeExperiment(dataExtractor):
@@ -182,11 +191,16 @@ class gradientBoostingClassifierExperiment(dataExtractor):
             "loss": ["deviance", "exponential"],
             "max_features": ["auto", "sqrt", "log2"]
         }
+
+def experiment(zipPath):
+    experiments = {"D": decisionTreeExperiment(zipPath), "BG": baggingClassifierExperiment(zipPath), "RF": randomForestClassifierExperiment(zipPath), "GB": gradientBoostingClassifierExperiment(zipPath)}
+    for key, val in experiments.items():
+        val.searchForEachDataSet(val.paramGrid, key)
+        val.test(key)
+        val.exportTable(key)
 def main():
-    experiment = decisionTreeExperiment("project2_data.zip")
-    experiment.searchForEachDataSet()
-    experiment.test()
-    experiment.outputToTextFile()
+    experiment("project2_data.zip")
+
 
 if __name__ == "__main__":
     main()
