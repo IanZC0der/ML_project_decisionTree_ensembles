@@ -4,6 +4,7 @@ import os
 import io
 import glob
 import numpy as np
+import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble import RandomForestClassifier
@@ -121,6 +122,23 @@ class dataExtractor:
                     print("\n--------test accuracy and f1score\n")
 
             sys.stdout = sys.__stdout__
+    def exportTable(self, identifier):
+        table = []
+        for clause, val1 in self.testResults.items():
+            for example, val2 in val1.items():
+                row = {
+                    "Clauses_number": clause,
+                    "examples_number": example,
+                    **{f"Parameter_{k}": v for k, v in val2["bestParams"].items()},
+                    "validation_accuracy": self.bestParams[clause][example]["accuracy"],
+                    "validation_f1score": self.bestParams[clause][example]["F1Score"],
+                    "test_accuracy": val2["accuracy"],
+                    "test_f1score": val2["F1Score"]
+                }
+                table.append(row)
+        
+        df = pd.DataFrame(rows)
+        df.to_excel(f"results_{identifier}.xlsx", index=False)
 
 
 class decisionTreeExperiment(dataExtractor):
