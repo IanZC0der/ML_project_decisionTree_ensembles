@@ -5,16 +5,26 @@ import io
 import glob
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import make_scorer, accuracy_score, precision_score, recall_score, f1_score
-
+from sklearn.ensemble import GradientBoostingClassifier
 class dataExtractor:
     def __init__(self, zipPath):
         self.allData = self._initializeAllData()
         self.zipPath = os.path.join("./", zipPath)
         self.folderName = None
         self._extractFile()
+        self.bestParams = self._initialization()
+        self.testResults = self._initialization()
+        self.scoring = {
+            'f1_score': make_scorer(f1_score, zero_division=0.0, average="binary"),
+            'accuracy': make_scorer(accuracy_score),
+            'precision': make_scorer(precision_score, zero_division=0.0, average="binary"),
+            'recall': make_scorer(recall_score, average="binary")
+        }
 
     
     def _initializeAllData(self):
@@ -36,27 +46,6 @@ class dataExtractor:
                 with folder.open(oneCsv) as f:
                     dataSet = np.genfromtxt(f, delimiter=",", dtype=int)
                     self.allData[clauseNumber][exampleNumber][dataType] = dataSet
-
-
-class decisionTreeExperiment(dataExtractor):
-    def __init__(self, zipPath):
-        super().__init__(zipPath)
-        self.bestParams = self._initialization()
-        self.testResults = self._initialization()
-        self.scoring = {
-            'f1_score': make_scorer(f1_score, zero_division=0.0, average="binary"),
-            'accuracy': make_scorer(accuracy_score),
-            'precision': make_scorer(precision_score, zero_division=0.0, average="binary"),
-            'recall': make_scorer(recall_score, average="binary")
-        }
-        self.paramGrid = {
-            "criterion": ["gini", "entropy"],
-            "splitter": ["best", "random"],
-            "max_depth": list(range(2, 53, 2)),
-            "max_features": [None, "sqrt", "log2"],
-            "min_samples_split": list(range(2, 101, 2))
-        }
-    
     def _initialization(self):
         result = {}
         for clause in [300, 500, 1000, 1500, 1800]:
@@ -66,26 +55,43 @@ class decisionTreeExperiment(dataExtractor):
             result[clause] = result.get(clause, clauseDict)
         return result
     
-    def _randomizedGridSearch(self, X, Y):
-        model = DecisionTreeClassifier()
-        search = RandomizedSearchCV(estimator=model, param_distributions=self.paramGrid, n_iter=50, scoring=self.scoring, n_jobs=-1, refit="f1_score")
+    def _randomizedGridSearch(self, X, Y, model, paramGrid):
+        model = model
+        search = RandomizedSearchCV(estimator=model, param_distributions=paramGrid, n_iter=50, scoring=self.scoring, n_jobs=-1, refit="f1_score")
         search.fit(X, Y)
         return search.best_params_, search.best_estimator_
-    def searchForEachDataSet(self):
+    def searchForEachDataSet(self, paramGrid, identifier):
         for clauseNumber, val1 in self.allData.items():
             for exampleNumber, val2 in val1.items():
                 X, Y = val2["valid"][:, :-1], val2["valid"][:, -1]
-                self.bestParams[clauseNumber][exampleNumber]["bestParams"], model = self._randomizedGridSearch(X, Y)
+                searchModel = None
+                if identifier == "D":
+                    searchModel = DecisionTreeClassifier()
+                elif identifier == "BG":
+                    searchModel = BaggingClassifier(DecisionTreeClassifier())
+                elif identifier == "RF":
+                    searchModel = RandomForestClassifier()
+                elif identifier == "GB":
+                    searchModel = GradientBoostingClassifier()
+                self.bestParams[clauseNumber][exampleNumber]["bestParams"], model = self._randomizedGridSearch(X, Y, searchModel, paramGrid)
                 self.testResults[clauseNumber][exampleNumber]["bestParams"] = self.bestParams[clauseNumber][exampleNumber]["bestParams"]
                 [self.bestParams[clauseNumber][exampleNumber]["accuracy"], self.bestParams[clauseNumber][exampleNumber]["F1Score"]] = self._calc(Y, model.predict(X))
     
-    def test(self):
+    def test(self, identifier):
         for clauseNumber, val1 in self.allData.items():
             for exampleNumber, val2 in val1.items():
                 X, Y = np.vstack((self.allData[clauseNumber][exampleNumber]["train"][:,:-1], self.allData[clauseNumber][exampleNumber]["valid"][:,:-1])), np.concatenate((self.allData[clauseNumber][exampleNumber]["train"][:,-1], self.allData[clauseNumber][exampleNumber]["valid"][:,-1]))
-                tree = DecisionTreeClassifier(**(self.testResults[clauseNumber][exampleNumber]["bestParams"]))
-                tree.fit(X, Y)
-                YPred = tree.predict(self.allData[clauseNumber][exampleNumber]["test"][:, :-1])
+                model = None
+                if identifier == "D":
+                    model = DecisionTreeClassifier(**(self.testResults[clauseNumber][exampleNumber]["bestParams"]))
+                elif identifier == "BG":
+                    model = BaggingClassifier(DecisionTreeClassifier(), **(self.testResults[clauseNumber][exampleNumber]["bestParams"]))
+                elif identifier == "RF":
+                    model = RandomForestClassifier(**(self.testResults[clauseNumber][exampleNumber]["bestParams"]))
+                elif identifier == "GB":
+                    model = GradientBoostingClassifier(**(self.testResults[clauseNumber][exampleNumber]["bestParams"]))
+                model.fit(X, Y)
+                YPred = model.predict(self.allData[clauseNumber][exampleNumber]["test"][:, :-1])
                 [self.testResults[clauseNumber][exampleNumber]["accuracy"], self.testResults[clauseNumber][exampleNumber]["F1Score"]] = self._calc(self.allData[clauseNumber][exampleNumber]["test"][:, -1], YPred)
     
     def _calc(self, Y, YPred):
@@ -94,8 +100,8 @@ class decisionTreeExperiment(dataExtractor):
         temp = [accuracy, fscore]
         return [round(_, 3) for _ in temp]
     
-    def outputToTextFile(self):
-        filePath = "./results_decisionTree.txt"
+    def outputToTextFile(self, identifier):
+        filePath = f"./results_{identifier}.txt"
         with open(filePath, "w") as file:
             sys.stdout = file
             for clauseNumber, val1 in self.allData.items():
@@ -117,6 +123,47 @@ class decisionTreeExperiment(dataExtractor):
             sys.stdout = sys.__stdout__
 
 
+class decisionTreeExperiment(dataExtractor):
+    def __init__(self, zipPath):
+        super().__init__(zipPath)
+        self.paramGrid = {
+            "criterion": ["gini", "entropy"],
+            "splitter": ["best", "random"],
+            "max_depth": list(range(2, 53, 2)),
+            "max_features": [None, "sqrt", "log2"],
+            "min_samples_split": list(range(2, 101, 2))
+        }
+
+class baggingClassifierExperiment(dataExtractor):
+    def __init__(self, zipPath):
+        super().__init__(zipPath)
+        self.paramGrid = {
+            "n_estimators": list(range(5, 101, 1)),
+            "max_samples": np.linspace(0.1, 1.0, 10),
+            "max_features": np.linspace(0.1, 1.0, 10)
+        }
+
+class randomForestClassifierExperiment(dataExtractor):
+    def __init__(self, zipPath):
+        super().__init__(zipPath)
+        self.paramGrid = {
+            "n_estimators": list(range(5, 101, 1)),
+            "criterion": ["gini", "entropy"],
+            "class_weight": ["balanced", "balanced_subsample"],
+            "max_features": [None, 'sqrt', 'log2'],
+            "max_depth":list(range(2, 53, 2)),
+        }
+
+class gradientBoostingClassifierExperiment(dataExtractor):
+    def __init__(self, zipPath):
+        super().__init__(zipPath)
+        self.paramGrid = {
+            "max_depth":list(range(2, 53, 2)),
+            "n_estimators": list(range(100, 1100, 100)),
+            "learning_rate": [0.01, 0.04, 0.06, 0.08, 0.1, 0.2, 0.3, 0.4, 0.5],
+            "loss": ["deviance", "exponential"],
+            "max_features": ["auto", "sqrt", "log2"]
+        }
 def main():
     experiment = decisionTreeExperiment("project2_data.zip")
     experiment.searchForEachDataSet()
