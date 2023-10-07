@@ -82,11 +82,11 @@ class decisionTreeExperiment(dataExtractor):
     def test(self):
         for clauseNumber, val1 in self.allData.items():
             for exampleNumber, val2 in val1.items():
-                X, Y = np.vstack((self.allData["train"][:,:-1], self.allData["valid"][:,:-1])), np.concatenate((self.allData["train"][:,-1], self.allData["valid"][:,-1]))
+                X, Y = np.vstack((self.allData[clauseNumber][exampleNumber]["train"][:,:-1], self.allData[clauseNumber][exampleNumber]["valid"][:,:-1])), np.concatenate((self.allData[clauseNumber][exampleNumber]["train"][:,-1], self.allData[clauseNumber][exampleNumber]["valid"][:,-1]))
                 tree = DecisionTreeClassifier(**(self.testResults[clauseNumber][exampleNumber]["bestParams"]))
                 tree.fit(X, Y)
-                YPred = tree.predict(self.allData["test"][:, :-1])
-                [self.testResults[clauseNumber][exampleNumber]["accuracy"], self.testResults[clauseNumber][exampleNumber]["F1Score"]] = self._calc(self.allData["test"][:, -1], YPred)
+                YPred = tree.predict(self.allData[clauseNumber][exampleNumber]["test"][:, :-1])
+                [self.testResults[clauseNumber][exampleNumber]["accuracy"], self.testResults[clauseNumber][exampleNumber]["F1Score"]] = self._calc(self.allData[clauseNumber][exampleNumber]["test"][:, -1], YPred)
     
     def _calc(self, Y, YPred):
         accuracy = accuracy_score(Y, YPred)
