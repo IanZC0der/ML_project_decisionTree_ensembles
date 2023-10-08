@@ -61,7 +61,7 @@ class dataExtractor:
     
     def _randomizedGridSearch(self, X, Y, model, paramGrid):
         model = model
-        search = RandomizedSearchCV(estimator=model, param_distributions=paramGrid, n_iter=50, scoring=self.scoring, refit="f1_score")
+        search = RandomizedSearchCV(estimator=model, param_distributions=paramGrid, n_iter=50, scoring=self.scoring, n_jobs=-2, refit="f1_score")
         search.fit(X, Y)
         return search.best_params_, search.best_estimator_
     def searchForEachDataSet(self, paramGrid, identifier):
@@ -191,8 +191,8 @@ class gradientBoostingClassifierExperiment(dataExtractor):
         self.paramGrid = {
             "max_depth":list(range(2, 53, 2)),
             "n_estimators": list(range(100, 1100, 100)),
-            "learning_rate": [0.01, 0.04, 0.06, 0.08, 0.1, 0.2, 0.3, 0.4, 0.5],
-            "loss": ["log_loss", "exponential"],
+            "learning_rate": [0.1, 0.2, 0.3, 0.4, 0.5],
+            "loss": ["log_loss"],
             "max_features": ["sqrt", "log2"]
         }
 
