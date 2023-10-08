@@ -61,7 +61,7 @@ class dataExtractor:
     
     def _randomizedGridSearch(self, X, Y, model, paramGrid):
         model = model
-        search = RandomizedSearchCV(estimator=model, param_distributions=paramGrid, n_iter=50, scoring=self.scoring, n_jobs=-1, refit="f1_score")
+        search = RandomizedSearchCV(estimator=model, param_distributions=paramGrid, n_iter=50, scoring=self.scoring, refit="f1_score")
         search.fit(X, Y)
         return search.best_params_, search.best_estimator_
     def searchForEachDataSet(self, paramGrid, identifier):
