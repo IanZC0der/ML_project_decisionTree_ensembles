@@ -14,6 +14,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import make_scorer, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.datasets import fetch_openml
 class dataExtractor:
     def __init__(self, zipPath):
         self.allData = self._initializeAllData()
@@ -147,7 +148,7 @@ class dataExtractor:
         sheet.insert_rows(idx=1)
 
         numColumns = len(df.columns)
-        sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=num_columns)
+        sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=numColumns)
         sheet["A1"] = "D: decision tree classifier\nBG: bagging classifier\nRF: random forest classifier\nGB: gradient boosting classifier\nAuthor: Ian Zhang"
         file.save(xlsxFile)
 
@@ -195,12 +196,37 @@ class gradientBoostingClassifierExperiment(dataExtractor):
             "max_features": ["sqrt", "log2"]
         }
 
+def mnistExperiment(identifier, aClassifier):
+    # Load data from https://www.openml.org/d/554
+    X, y = fetch_openml("mnist_784", version=1, return_X_y=True, parser="auto")
+    X = X / 255.
+    # rescale the data, use the traditional train/test split
+    # (60K: Train) and (10K: Test)
+    X_train, X_test = X[:60000], X[60000:]
+    y_train, y_test = y[:60000], y[60000:]
+    params = aClassifier.testResults[1800][5000]["bestParams"]
+    model = None
+    if identifier == "D":
+        model = DecisionTreeClassifier(**params)
+    elif identifier == "BG":
+        model = BaggingClassifier(DecisionTreeClassifier(), **params)
+    elif identifier == "RF":
+        model = RandomForestClassifier(**params)
+    elif identifier == "GB":
+        model = GradientBoostingClassifier(**params)
+    model.fit(X_train, y_train)
+    accuracy = accuracy_score(y_test, model.predict(X_test))
+    print(f"Model Identifier: {identifier}\n")
+    print(f"Accuracy on MNIST: {accuracy}\n")
+    
+    
 def experiment(zipPath):
     experiments = {"D": decisionTreeExperiment(zipPath), "BG": baggingClassifierExperiment(zipPath), "RF": randomForestClassifierExperiment(zipPath), "GB": gradientBoostingClassifierExperiment(zipPath)}
     for key, val in experiments.items():
         val.searchForEachDataSet(val.paramGrid, key)
         val.test(key)
         val.exportTable(key)
+        mnistExperiment(key, val)
 def main():
     experiment("project2_data.zip")
 
