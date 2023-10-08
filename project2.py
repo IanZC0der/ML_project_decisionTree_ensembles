@@ -142,11 +142,14 @@ class dataExtractor:
         df = pd.DataFrame(table)
         xlsxFile = f"results_{identifier}.xlsx"
         df.to_excel(xlsxFile, index=False)
-        file = load_workbook(filename)
-        sheet = book.active
-        comment = Comment(text="D: decision tree classifier\nBG: bagging classifier\nRF: random forest classifier\nGB: gradient boosting classifier", author="Ian Zhang")
-        sheet["A1"].comment = comment
-        file.save(filename)
+        file = load_workbook(xlsxFile)
+        sheet = file.active
+        sheet.insert_rows(idx=1)
+
+        numColumns = len(df.columns)
+        sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=num_columns)
+        sheet["A1"] = "D: decision tree classifier\nBG: bagging classifier\nRF: random forest classifier\nGB: gradient boosting classifier\nAuthor: Ian Zhang"
+        file.save(xlsxFile)
 
 
 
@@ -188,8 +191,8 @@ class gradientBoostingClassifierExperiment(dataExtractor):
             "max_depth":list(range(2, 53, 2)),
             "n_estimators": list(range(100, 1100, 100)),
             "learning_rate": [0.01, 0.04, 0.06, 0.08, 0.1, 0.2, 0.3, 0.4, 0.5],
-            "loss": ["deviance", "exponential"],
-            "max_features": ["auto", "sqrt", "log2"]
+            "loss": ["log_loss", "exponential"],
+            "max_features": ["sqrt", "log2"]
         }
 
 def experiment(zipPath):
