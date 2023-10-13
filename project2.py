@@ -286,6 +286,7 @@ def mnistResults():
         experiment.test(identifier)
         row = {
             "identifier": identifier,
+            "bestParams": experiment.bastParams,
             "validationAccuracy": experiment.validationAccuracy,
             "testAccuracy": experiment.testAccuracy
         }
