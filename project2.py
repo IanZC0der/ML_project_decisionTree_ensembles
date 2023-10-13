@@ -197,29 +197,6 @@ class gradientBoostingClassifierExperiment(dataExtractor):
             "max_features": ["sqrt", "log2"]
         }
 
-def mnistExperiment(identifier, aClassifier):
-    # Load data from https://www.openml.org/d/554
-    X, y = fetch_openml("mnist_784", version=1, return_X_y=True, parser="auto")
-    X = X / 255.
-    # rescale the data, use the traditional train/test split
-    # (60K: Train) and (10K: Test)
-    X_train, X_test = X[:60000], X[60000:]
-    y_train, y_test = y[:60000], y[60000:]
-    params = aClassifier.testResults[1800][5000]["bestParams"]
-    model = None
-    if identifier == "D":
-        model = DecisionTreeClassifier(**params)
-    elif identifier == "BG":
-        model = BaggingClassifier(DecisionTreeClassifier(), **params)
-    elif identifier == "RF":
-        model = RandomForestClassifier(**params)
-    elif identifier == "GB":
-        model = GradientBoostingClassifier(**params)
-    model.fit(X_train, y_train)
-    accuracy = accuracy_score(y_test, model.predict(X_test))
-    print(f"Model Identifier: {identifier}\n")
-    print(f"Accuracy on MNIST: {accuracy}\n")
-    
 class mnistExperiment:
     def __init__(self):
         X, y = fetch_openml("mnist_784", version=1, return_X_y=True, parser="auto")
@@ -334,7 +311,6 @@ def experiment(zipPath):
         val.searchForEachDataSet(val.paramGrid, key)
         val.test(key)
         val.exportTable(key)
-        mnistExperiment(key, val)
 def main():
     experiment("project2_data.zip")
     mnistResults()
