@@ -234,10 +234,10 @@ class mnistExperiment:
         self.testY = y_test
         _, self.validationDataX, _y, self.validationDataY = train_test_split(self.trainX, self.trainY, test_size=0.1, stratify=y_train, random_state=4)
         self.scoring = {
-            'f1_score': make_scorer(f1_score, zero_division=0.0, average="binary"),
+            'f1_score': make_scorer(f1_score, zero_division=0.0, average="macro"),
             'accuracy': make_scorer(accuracy_score),
-            'precision': make_scorer(precision_score, zero_division=0.0, average="binary"),
-            'recall': make_scorer(recall_score, average="binary")
+            'precision': make_scorer(precision_score, zero_division=0.0, average="macro"),
+            'recall': make_scorer(recall_score, average="macro")
         }
         self.bastParams = None
         self.validationAccuracy = None
@@ -260,8 +260,7 @@ class mnistExperiment:
             searchModel = GradientBoostingClassifier()
         self.bestParams, model = self._randomizedGridSearch(searchModel, paramGrid)
         self.validationAccuracy = accuracy_score(self.validationDataY, model.predict(self.validationDataX))
-        [self.bestParams[clauseNumber][exampleNumber]["accuracy"], self.bestParams[clauseNumber][exampleNumber]["F1Score"]] = self._calc(Y, model.predict(X))
-    
+
     def test(self, identifier):
         model = None
         if identifier == "D":
