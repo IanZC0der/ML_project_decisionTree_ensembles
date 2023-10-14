@@ -216,7 +216,7 @@ class mnistExperiment:
             'precision': make_scorer(precision_score, zero_division=0.0, average="macro"),
             'recall': make_scorer(recall_score, average="macro")
         }
-        self.bastParams = None
+        self.bestParams = None
         self.validationAccuracy = None
         self.testAccuracy = None
     def _randomizedGridSearch(self, model, paramGrid):
@@ -286,7 +286,7 @@ def mnistResults():
         experiment.test(identifier)
         row = {
             "identifier": identifier,
-            "bestParams": experiment.bastParams,
+            "bestParams": experiment.bestParams,
             "validationAccuracy": experiment.validationAccuracy,
             "testAccuracy": experiment.testAccuracy
         }
@@ -313,7 +313,7 @@ def experiment(zipPath):
         val.test(key)
         val.exportTable(key)
 def main():
-    experiment("project2_data.zip")
+    # experiment("project2_data.zip")
     mnistResults()
 
 
