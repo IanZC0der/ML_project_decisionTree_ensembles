@@ -313,12 +313,9 @@ def experiment(zipPath):
         val.test(key)
         val.exportTable(key)
 def main():
-    # experiment("project2_data.zip")
+    experiment("project2_data.zip")
     mnistResults()
 
 
 if __name__ == "__main__":
     main()
-
-
-# ext = dataExtractor("project2_data.zip")
